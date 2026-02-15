@@ -47,7 +47,7 @@ while True:
         # We take 30% of the Neutral score and add it to Happy.
         # This makes "Pleasant" faces register as "Happy".
         
-        adjusted_happy = raw_happy + (raw_neutral * 0.4) # Add 40% of neutral to happy
+        adjusted_happy = raw_happy + (raw_neutral * 0.15) # Add 40% of neutral to happy
         
         # Cap it at 100
         final_happy = min(100, int(adjusted_happy))

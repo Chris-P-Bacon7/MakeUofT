@@ -1,53 +1,41 @@
 import numpy as np
 
 def complex_analysis(happy_hist, surprise_hist, neutral_hist, gsr_hist):
-    """
-    Returns: (Verdict Text, Color Tuple, ID)
-    ID Mapping:
-    0 = GENUINELY HAPPY
-    1 = POLITELY HAPPY
-    2 = SECRETLY HAPPY
-    3 = UNIMPRESSED
-    """
-    
-    # Safety Check
-    if not gsr_hist or len(gsr_hist) < 10:
-        return "ANALYZING...", (200, 200, 200), 3 # Default to Unimpressed/Neutral
+    # 1. SAFETY CHECK
+    if len(gsr_hist) < 40: # Wait slightly longer for data stability
+        return "STABILIZING SENSORS...", (150, 150, 150), 4
 
-    # 1. CALCULATE METRICS
+    # 2. CALCULATE BIO-METRICS (Tougher Filter)
     gsr_smooth = np.convolve(gsr_hist, np.ones(5)/5, mode='valid')
     gradient = np.gradient(gsr_smooth)
+    # Cumulative Energy
     reaction_energy = np.sum(-gradient[gradient < 0]) 
     
+    # 3. CALCULATE EMOTION METRICS (Switching from MAX to MEAN)
+    # Using the mean makes it "tougher" because you must maintain the face
     avg_happy = np.mean(happy_hist) if happy_hist else 0
     avg_surprise = np.mean(surprise_hist) if surprise_hist else 0
+    avg_neutral = np.mean(neutral_hist) if neutral_hist else 0
 
-    # 2. THRESHOLDS
-    BIO_THRESHOLD = 100   
-    
-    # WAS: SMILE_THRESHOLD = 50
-    SMILE_THRESHOLD = 30 # Lower this to 30. 
-    # If they are above 30%, they are trying to look happy. That counts.
+    # 4. STRICT THRESHOLDS
+    # Raised BIO from 100 to 200: Requires a very sharp, distinct sweat spike
+    BIO_THRESHOLD = 150   
+    # Raised SMILE from 40 to 60: Requires a clear, wide grin
+    SMILE_THRESHOLD = 50
+    SURPRISE_THRESHOLD = 35
 
-    SURPRISE_THRESHOLD = 20
-
-    # --- THE 4 VERDICTS ---
-
-    is_smiling = avg_happy > SMILE_THRESHOLD
+    # 5. CLASSIFICATION WITH "NEUTRAL" PENALTY
+    # If the user is >70% neutral on average, we disqualify 'is_smiling'
+    is_smiling = (avg_happy > SMILE_THRESHOLD) and (avg_neutral < 70)
     has_reaction = (reaction_energy > BIO_THRESHOLD) or (avg_surprise > SURPRISE_THRESHOLD)
 
-    # CASE 0: GENUINELY HAPPY
+    # --- THE VERDICTS ---
     if is_smiling and has_reaction:
         return "GENUINELY HAPPY", (0, 255, 0), 0
-
-    # CASE 1: POLITE HAPPY
     elif is_smiling and not has_reaction:
         return "POLITE HAPPY", (255, 255, 0), 1
-
-    # CASE 2: SECRETLY HAPPY
-    elif not is_smiling and (reaction_energy > BIO_THRESHOLD):
+    elif not is_smiling and has_reaction:
         return "SECRETLY HAPPY", (0, 255, 255), 2
-
-    # CASE 3: UNIMPRESSED
     else:
+        # Default fallback is now much more likely
         return "UNIMPRESSED", (255, 0, 0), 3

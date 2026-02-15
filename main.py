@@ -32,6 +32,10 @@ def run_esp_face():
     subprocess.run([sys.executable, "esp_face_bridge.py"])
 
 if __name__ == "__main__":
+    # Ensure results.txt exists and starts at 4
+    with open("results.txt", "w") as f:
+        f.write("4")
+    
     print("--- PRESAGE ALL-IN-ONE SYSTEM START ---")
     print("Type Ctrl+C to Stop All Systems")
 
