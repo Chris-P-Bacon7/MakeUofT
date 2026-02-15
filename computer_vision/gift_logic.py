@@ -1,26 +1,53 @@
-def calculate_gift_score(happiness, pulse, gsr):
+import numpy as np
+
+def complex_analysis(happy_hist, surprise_hist, neutral_hist, gsr_hist):
     """
-    Returns a score (0-100) and a string verdict.
+    Returns: (Verdict Text, Color Tuple, ID)
+    ID Mapping:
+    0 = GENUINELY HAPPY
+    1 = POLITELY HAPPY
+    2 = SECRETLY HAPPY
+    3 = UNIMPRESSED
     """
-    # Normalize inputs (assuming gsr is 0-1023, pulse is 0-20, happy is 0-100)
     
-    # 1. THE FAKE SMILE DETECTOR
-    # If they are smiling but their body is completely calm...
-    if happiness > 70 and gsr < 300 and pulse < 5:
-        return 45, "POLITE SMILE (FAKE?)"
+    # Safety Check
+    if not gsr_hist or len(gsr_hist) < 10:
+        return "ANALYZING...", (200, 200, 200), 3 # Default to Unimpressed/Neutral
 
-    # 2. THE GENUINE EXCITEMENT
-    # High smile + any physiological spike
-    if happiness > 60 and (gsr > 500 or pulse > 10):
-        return 95, "GENUINE JOY!"
+    # 1. CALCULATE METRICS
+    gsr_smooth = np.convolve(gsr_hist, np.ones(5)/5, mode='valid')
+    gradient = np.gradient(gsr_smooth)
+    reaction_energy = np.sum(-gradient[gradient < 0]) 
+    
+    avg_happy = np.mean(happy_hist) if happy_hist else 0
+    avg_surprise = np.mean(surprise_hist) if surprise_hist else 0
 
-    # 3. THE "SHY" LIKING
-    # They aren't smiling much, but their heart/sweat is spiking!
-    if happiness < 40 and (gsr > 600 or pulse > 12):
-        return 75, "INTERNALLY EXCITED"
+    # 2. THRESHOLDS
+    BIO_THRESHOLD = 100   
+    
+    # WAS: SMILE_THRESHOLD = 50
+    SMILE_THRESHOLD = 30 # Lower this to 30. 
+    # If they are above 30%, they are trying to look happy. That counts.
 
-    # 4. THE DISAPPOINTMENT
-    if happiness < 30 and gsr < 400:
-        return 15, "NOT THEIR STYLE"
+    SURPRISE_THRESHOLD = 20
 
-    return 50, "ANALYZING..."
+    # --- THE 4 VERDICTS ---
+
+    is_smiling = avg_happy > SMILE_THRESHOLD
+    has_reaction = (reaction_energy > BIO_THRESHOLD) or (avg_surprise > SURPRISE_THRESHOLD)
+
+    # CASE 0: GENUINELY HAPPY
+    if is_smiling and has_reaction:
+        return "GENUINELY HAPPY", (0, 255, 0), 0
+
+    # CASE 1: POLITE HAPPY
+    elif is_smiling and not has_reaction:
+        return "POLITE HAPPY", (255, 255, 0), 1
+
+    # CASE 2: SECRETLY HAPPY
+    elif not is_smiling and (reaction_energy > BIO_THRESHOLD):
+        return "SECRETLY HAPPY", (0, 255, 255), 2
+
+    # CASE 3: UNIMPRESSED
+    else:
+        return "UNIMPRESSED", (255, 0, 0), 3
