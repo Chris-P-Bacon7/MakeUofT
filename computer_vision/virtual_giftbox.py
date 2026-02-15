@@ -11,7 +11,7 @@ sock.bind((UDP_IP, UDP_PORT))
 sock.setblocking(False)
 
 TEST_DURATION = 10
-TRIGGER_THRESHOLD = 30 
+TRIGGER_THRESHOLD = 30
 
 # GRAPH DATA STORAGE
 graph_len = 500 # Width of the graph window
@@ -180,18 +180,22 @@ while True:
         if remaining <= 0: state = STATE_REPORT
 
     elif state == STATE_REPORT:
-        # LOGIC & FILE WRITE
+        # 1. Perform the Final Analysis
         verdict, v_color, v_id = gift_logic.complex_analysis(rec_h, rec_s, [], rec_g)
         
-        try:
-            with open("results.txt", "w") as f: f.write(str(v_id))
-        except: pass
+        # 2. THE FIX: Only write to the file IF the test is actually over
+        # and we have collected enough data (e.g., 10 seconds of data)
+        if len(rec_g) >= 100: # Assuming 10Hz, 100 samples = 10 seconds
+            try:
+                with open("results.txt", "w") as f:
+                    f.write(str(v_id))
+            except Exception as e:
+                print(f"File Write Error: {e}")
 
-        # RESULT BOX
+        # 3. UI Drawing (unchanged)
         draw.rectangle((50, 500, 750, 580), fill=(40, 40, 40), outline=v_color, width=3)
         draw.text((300, 510), "ANALYSIS COMPLETE", fill=(200, 200, 200))
         draw.text((250, 535), verdict, fill=v_color, font_size=40)
-        
         draw.text((650, 550), "[R] RESET", fill=(100, 100, 100))
 
     # RENDER
@@ -202,7 +206,10 @@ while True:
     if key == ord('q'): break
     if key == ord('r'): 
         state = STATE_WAITING
-        # Optional: Clear file on reset
+        # Clear the recording lists so the NEXT test starts fresh
+        rec_h, rec_s, rec_g = [], [], [] 
+        
+        # OPTIONAL: Set file to '4' (Scanning/Neutral) so the face clears
         try:
-            with open("results.txt", "w") as f: f.write("3")
+            with open("results.txt", "w") as f: f.write("4")
         except: pass
